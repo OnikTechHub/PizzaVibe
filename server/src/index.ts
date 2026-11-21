@@ -1,4 +1,13 @@
 import 'dotenv/config';
+import dns from 'dns';
+
+// Fix for Windows & ISP Node.js DNS SRV resolution issues with MongoDB Atlas (querySrv ECONNREFUSED)
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+} catch (e) {
+  console.warn('[Server] DNS setup warning:', e);
+}
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';

@@ -27,7 +27,7 @@ const generateOtp = (): string => {
 };
 
 /**
- * HTML Email Template for 6-Digit OTP Verification
+ * HTML Email Template for 6-Digit Registration OTP Verification
  */
 const generateOtpEmailHtml = (name: string, otp: string): string => {
   return `
@@ -80,7 +80,60 @@ const generateOtpEmailHtml = (name: string, otp: string): string => {
 };
 
 /**
- * HTML Email Template for Password Reset Link
+ * HTML Email Template for OTP Password Reset
+ */
+const generateForgotOtpEmailHtml = (name: string, otp: string): string => {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 24px; }
+    .container { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .header { background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); padding: 28px 32px; text-align: center; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { color: #fecaca; margin: 6px 0 0; font-size: 13px; font-weight: 500; }
+    .content { padding: 32px; text-align: center; }
+    .greeting { font-size: 16px; color: #334155; margin-bottom: 12px; }
+    .instruction { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+    .otp-box { background: #fff1f2; border: 2px dashed #f87171; border-radius: 16px; padding: 20px 24px; margin: 0 auto 24px auto; display: inline-block; }
+    .otp-code { font-size: 36px; font-weight: 900; letter-spacing: 10px; color: #dc2626; font-family: 'Courier New', Courier, monospace; margin: 0; }
+    .validity { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+    .footer { padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🍕 PizzaVibe Password Reset</h1>
+      <p>Artisan Kitchen Security</p>
+    </div>
+    <div class="content">
+      <p class="greeting">Hello <strong>${name}</strong>,</p>
+      <p class="instruction">
+        We received a request to reset your PizzaVibe password. Use the 6-digit verification code below to verify your account and set a new password:
+      </p>
+      <div class="otp-box">
+        <p class="otp-code">${otp}</p>
+        <p class="validity">&bull; Valid for 10 minutes &bull;</p>
+      </div>
+      <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin: 0;">
+        If you did not request a password reset, you can safely ignore this email. Never share this code with anyone.
+      </p>
+    </div>
+    <div class="footer">
+      PizzaVibe Kitchen &bull; GEC Circle, CDA Avenue, Chattogram 4000, Bangladesh<br>
+      Direct Support: onikdas.dev@gmail.com
+    </div>
+  </div>
+</body>
+</html>
+`;
+};
+
+/**
+ * HTML Email Template for Password Reset Link (Fallback)
  */
 const generateResetEmailHtml = (name: string, resetUrl: string): string => {
   return `
@@ -441,6 +494,133 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 /**
+ * @route   GET /api/auth/google/url
+ * @desc    Generate Google OAuth URL with prompt=select_account
+ * @access  Public
+ */
+router.get('/google/url', (_req: Request, res: Response) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  if (!clientId) {
+    return res.status(400).json({
+      success: false,
+      message: 'GOOGLE_CLIENT_ID is not configured in server .env. Please configure your Google OAuth credentials.',
+    });
+  }
+
+  const redirectUri = `${CLIENT_URL}/auth/callback/google`;
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent('openid email profile')}&prompt=select_account&access_type=offline`;
+
+  return res.json({ success: true, url });
+});
+
+/**
+ * @route   POST /api/auth/google/callback
+ * @desc    Exchange Google OAuth code for tokens, fetch user profile, and login/register customer
+ * @access  Public
+ */
+router.post('/google/callback', async (req: Request, res: Response) => {
+  try {
+    const { code, redirectUri } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'OAuth authorization code is required' });
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      return res.status(500).json({
+        success: false,
+        message: 'Google OAuth credentials (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET) missing on server.',
+      });
+    }
+
+    const effectiveRedirectUri = redirectUri || `${CLIENT_URL}/auth/callback/google`;
+
+    // 1. Exchange authorization code with Google token endpoint
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: effectiveRedirectUri,
+        grant_type: 'authorization_code',
+      }).toString(),
+    });
+
+    const tokenData = (await tokenResponse.json()) as any;
+
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      console.error('[Google Token Exchange Error]:', tokenData);
+      return res.status(400).json({
+        success: false,
+        message: tokenData.error_description || 'Failed to exchange authorization code with Google.',
+      });
+    }
+
+    // 2. Fetch authenticated user profile from Google UserInfo endpoint
+    const userinfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    const profile = (await userinfoResponse.json()) as any;
+
+    if (!userinfoResponse.ok || !profile.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to retrieve profile information from Google account.',
+      });
+    }
+
+    const cleanEmail = profile.email.trim().toLowerCase();
+    const cleanName = profile.name ? profile.name.trim() : cleanEmail.split('@')[0];
+    const googleId = profile.sub || '';
+
+    // 3. Find existing user or register new customer
+    let user = await User.findOne({ email: cleanEmail });
+
+    if (user) {
+      if (!user.isVerified) user.isVerified = true;
+      if (googleId && !user.googleId) user.googleId = googleId;
+      await user.save();
+    } else {
+      const randomPassword = crypto.randomBytes(24).toString('hex');
+      user = await User.create({
+        name: cleanName,
+        email: cleanEmail,
+        password: randomPassword,
+        role: 'customer',
+        isVerified: true,
+        googleId,
+      });
+    }
+
+    // 4. Generate JWT
+    const token = generateToken(user._id.toString(), user.role);
+
+    return res.json({
+      success: true,
+      message: `Signed in with Google successfully as ${user.name}`,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+      },
+    });
+  } catch (error: unknown) {
+    console.error('[Google Callback Error]:', error);
+    const message = error instanceof Error ? error.message : 'Google OAuth processing failed';
+    return res.status(500).json({ success: false, message });
+  }
+});
+
+/**
  * @route   POST /api/auth/google
  * @desc    Authenticate or register customer via Google Sign-In
  * @access  Public
@@ -506,7 +686,7 @@ router.post('/google', async (req: Request, res: Response) => {
 
 /**
  * @route   POST /api/auth/forgot-password
- * @desc    Send password reset link token to email
+ * @desc    Step 1: Check user email, generate 6-digit OTP, save to DB and send via Nodemailer
  * @access  Public
  */
 router.post('/forgot-password', async (req: Request, res: Response) => {
@@ -523,55 +703,89 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
 
-    // Always return success even if user not found to prevent user enumeration
     if (!user) {
-      return res.json({
-        success: true,
-        message: 'If an account exists with this email address, a password reset link has been dispatched.',
+      return res.status(404).json({
+        success: false,
+        message: 'No PizzaVibe account found with this email address.',
       });
     }
 
-    // Generate random 32-byte token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    // Generate 6-digit numeric OTP code and set 10-minute expiration
+    const otp = generateOtp();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     await user.save();
-
-    const resetUrl = `${CLIENT_URL}/reset-password/${resetToken}`;
 
     await sendEmail({
       to: cleanEmail,
-      subject: 'Reset Your PizzaVibe Password',
-      html: generateResetEmailHtml(user.name, resetUrl),
-      text: `Hello ${user.name},\n\nPlease use the link below to reset your PizzaVibe password (valid for 1 hour):\n\n${resetUrl}\n\nWarm regards,\nPizzaVibe Kitchen`,
+      subject: `Your PizzaVibe Password Reset Code: ${otp}`,
+      html: generateForgotOtpEmailHtml(user.name, otp),
+      text: `Hello ${user.name},\n\nYour 6-digit PizzaVibe password reset code is: ${otp}\n\nValid for 10 minutes.\n\nWarm regards,\nPizzaVibe Kitchen`,
     });
 
     return res.json({
       success: true,
-      message: 'If an account exists with this email address, a password reset link has been dispatched.',
+      message: 'A 6-digit verification code has been dispatched to your email.',
+      email: cleanEmail,
     });
   } catch (error: unknown) {
     console.error('[Forgot Password Error]:', error);
-    const message = error instanceof Error ? error.message : 'Failed to process forgot password request';
+    const message = error instanceof Error ? error.message : 'Failed to dispatch reset code';
+    return res.status(500).json({ success: false, message });
+  }
+});
+
+/**
+ * @route   POST /api/auth/resend-forgot-otp
+ * @desc    Resend fresh 6-digit OTP for password reset
+ * @access  Public
+ */
+router.post('/resend-forgot-otp', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address.' });
+    }
+
+    const newOtp = generateOtp();
+    user.otp = newOtp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    await sendEmail({
+      to: cleanEmail,
+      subject: `Your New PizzaVibe Password Reset Code: ${newOtp}`,
+      html: generateForgotOtpEmailHtml(user.name, newOtp),
+      text: `Hello ${user.name},\n\nYour new PizzaVibe password reset code is: ${newOtp}\n\nValid for 10 minutes.`,
+    });
+
+    return res.json({
+      success: true,
+      message: 'A fresh 6-digit verification code has been dispatched to your email.',
+    });
+  } catch (error: unknown) {
+    console.error('[Resend Forgot OTP Error]:', error);
+    const message = error instanceof Error ? error.message : 'Failed to resend reset code';
     return res.status(500).json({ success: false, message });
   }
 });
 
 /**
  * @route   POST /api/auth/reset-password
- * @desc    Verify reset token & update password
+ * @desc    Step 2/3: Verify 6-digit OTP and update password in MongoDB
  * @access  Public
  */
 router.post('/reset-password', async (req: Request, res: Response) => {
   try {
-    const { token, password } = req.body;
-
-    if (!token || typeof token !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'Reset token is required.',
-      });
-    }
+    const { email, otp, token, password } = req.body;
 
     if (!password || typeof password !== 'string' || password.length < 6) {
       return res.status(400).json({
@@ -580,20 +794,59 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       });
     }
 
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() },
-    });
+    let user;
 
-    if (!user) {
+    // 1. Primary: 6-digit OTP verification flow
+    if (email && otp) {
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanOtp = String(otp).trim();
+
+      user = await User.findOne({ email: cleanEmail }).select('+password +otp +otpExpires');
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Account not found with this email address.',
+        });
+      }
+
+      if (!user.otp || user.otp !== cleanOtp) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid verification code. Please check your email and try again.',
+        });
+      }
+
+      if (!user.otpExpires || user.otpExpires < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification code has expired. Please request a new code.',
+        });
+      }
+    } else if (token) {
+      // 2. Fallback: Token-based link verification
+      user = await User.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: new Date() },
+      }).select('+password');
+
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password reset link is invalid or has expired. Please request a new one.',
+        });
+      }
+    } else {
       return res.status(400).json({
         success: false,
-        message: 'Password reset link is invalid or has expired. Please request a new one.',
+        message: 'Email and 6-digit verification code are required.',
       });
     }
 
-    // Update password (pre-save hook will hash it)
+    // Hash and update password (pre-save hook will hash it)
     user.password = password;
+    user.otp = undefined;
+    user.otpExpires = undefined;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();

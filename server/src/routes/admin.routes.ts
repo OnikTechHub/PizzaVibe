@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Inventory } from '../models/Inventory.js';
 import { Order, OrderStatus } from '../models/Order.js';
+import { Pizza } from '../models/Pizza.js';
 import { protect, requireAdmin } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -148,6 +149,129 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Server error';
+    res.status(500).json({ success: false, message });
+  }
+});
+
+/**
+ * @route   GET /api/admin/pizzas
+ * @desc    Get all pizzas for admin management (active and inactive)
+ * @access  Admin
+ */
+router.get('/pizzas', async (_req: Request, res: Response) => {
+  try {
+    const pizzas = await Pizza.find().sort({ createdAt: -1 });
+    res.json({
+      success: true,
+      count: pizzas.length,
+      pizzas,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Server error';
+    res.status(500).json({ success: false, message });
+  }
+});
+
+/**
+ * @route   POST /api/admin/pizzas
+ * @desc    Create a new pizza recipe in MongoDB
+ * @access  Admin
+ */
+router.post('/pizzas', async (req: Request, res: Response) => {
+  try {
+    const { name, description, price, category, fermentation, isAvailable, image } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Pizza name is required (at least 2 chars)' });
+    }
+
+    const numPrice = Number(price);
+    if (isNaN(numPrice) || numPrice < 0) {
+      return res.status(400).json({ success: false, message: 'Valid positive price is required' });
+    }
+
+    const cleanName = name.trim();
+    const baseSlug = cleanName
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const slug = `${baseSlug}-${Date.now().toString(36)}`;
+
+    const pizza = await Pizza.create({
+      name: cleanName,
+      slug,
+      description: description ? description.trim() : 'Handcrafted 48-hour slow fermented artisan sourdough pizza.',
+      basePrice: numPrice,
+      category: category || 'artisan-signature',
+      isAvailable: isAvailable !== false,
+      image: image || '',
+      rating: 4.8,
+      reviewsCount: 1,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `${pizza.name} created successfully in database`,
+      pizza,
+    });
+  } catch (error: unknown) {
+    console.error('[Admin Create Pizza Error]:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create pizza';
+    res.status(500).json({ success: false, message });
+  }
+});
+
+/**
+ * @route   PATCH /api/admin/pizzas/:id/availability
+ * @desc    Toggle pizza availability in MongoDB
+ * @access  Admin
+ */
+router.patch('/pizzas/:id/availability', async (req: Request, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const id = (Array.isArray(rawId) ? rawId[0] : rawId) as string;
+    const pizza = await Pizza.findById(id);
+
+    if (!pizza) {
+      return res.status(404).json({ success: false, message: 'Pizza not found' });
+    }
+
+    pizza.isAvailable = !pizza.isAvailable;
+    await pizza.save();
+
+    res.json({
+      success: true,
+      message: `${pizza.name} is now ${pizza.isAvailable ? 'available' : 'marked sold out'}`,
+      pizza,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update pizza availability';
+    res.status(500).json({ success: false, message });
+  }
+});
+
+/**
+ * @route   DELETE /api/admin/pizzas/:id
+ * @desc    Delete a pizza from MongoDB
+ * @access  Admin
+ */
+router.delete('/pizzas/:id', async (req: Request, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const id = (Array.isArray(rawId) ? rawId[0] : rawId) as string;
+    const pizza = await Pizza.findByIdAndDelete(id);
+
+    if (!pizza) {
+      return res.status(404).json({ success: false, message: 'Pizza not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `${pizza.name} removed from database`,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete pizza';
     res.status(500).json({ success: false, message });
   }
 });

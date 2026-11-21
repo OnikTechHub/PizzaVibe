@@ -63,17 +63,17 @@ const PizzaSchema = new Schema<IPizza>(
     defaultBase: {
       type: Schema.Types.ObjectId,
       ref: 'Inventory',
-      required: true,
+      required: false,
     },
     defaultSauce: {
       type: Schema.Types.ObjectId,
       ref: 'Inventory',
-      required: true,
+      required: false,
     },
     defaultCheese: {
       type: Schema.Types.ObjectId,
       ref: 'Inventory',
-      required: true,
+      required: false,
     },
     defaultVeggies: [
       {
