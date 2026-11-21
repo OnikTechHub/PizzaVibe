@@ -1,18 +1,39 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { Pizza, Clock, Mail, Phone, MapPin, Heart } from 'lucide-react';
 
 export default function Footer() {
+  const pathname = usePathname();
+  const isDashboardRoute =
+    pathname.startsWith('/admin') ||
+    pathname === '/dashboard' ||
+    pathname === '/profile' ||
+    pathname === '/orders' ||
+    pathname === '/cart';
+
   return (
-    <footer id="contact" className="bg-slate-50 text-slate-600 pt-16 pb-12 border-t border-slate-200">
+    <footer
+      id="contact"
+      className={`bg-slate-50 text-slate-600 pt-16 pb-12 border-t border-slate-200 transition-all duration-200 ${
+        isDashboardRoute ? 'lg:pl-64' : ''
+      }`}
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-12 sm:mb-14">
           {/* Brand Info */}
           <div className="space-y-4">
             <Link href="/" className="inline-flex items-center gap-2.5 text-slate-900 group">
-              <div className="w-9 h-9 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/30 group-hover:rotate-12 transition-transform duration-300">
-                <Pizza className="w-5 h-5" />
-              </div>
+              <Image
+                src="/PizzaVibeLogo.png"
+                alt="PizzaVibe Logo"
+                width={140}
+                height={44}
+                className="h-10 sm:h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              />
               <span className="font-extrabold text-xl tracking-tight">
                 Pizza<span className="text-red-600">Vibe</span>
               </span>
@@ -131,3 +152,4 @@ export default function Footer() {
     </footer>
   );
 }
+
