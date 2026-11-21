@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import {
   Pizza,
   Home,
@@ -41,6 +43,14 @@ interface NavbarProps {
 }
 
 export default function Navbar({ cartCount = 0, onOpenCart }: NavbarProps) {
+  const pathname = usePathname();
+  const isDashboardRoute =
+    pathname.startsWith('/admin') ||
+    pathname === '/dashboard' ||
+    pathname === '/profile' ||
+    pathname === '/orders' ||
+    pathname === '/cart';
+
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -93,7 +103,11 @@ export default function Navbar({ cartCount = 0, onOpenCart }: NavbarProps) {
 
   return (
     <>
-      <header className="sticky top-3 sm:top-4 z-40 px-3 sm:px-4 w-full">
+      <header
+        className={`sticky top-3 sm:top-4 z-40 px-3 sm:px-4 w-full transition-all duration-200 ${
+          isDashboardRoute ? 'lg:pl-64' : ''
+        }`}
+      >
         <nav className="max-w-6xl mx-auto bg-white/95 backdrop-blur-md border border-stone-200/80 shadow-md shadow-stone-900/5 rounded-full px-4 sm:px-6 py-2.5 sm:py-3 transition-all duration-300">
           <div className="flex items-center justify-between">
             {/* Brand Logo */}
@@ -101,9 +115,14 @@ export default function Navbar({ cartCount = 0, onOpenCart }: NavbarProps) {
               href="/"
               className="flex items-center gap-2.5 text-stone-900 group transition-transform duration-200 hover:scale-[1.02]"
             >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md shadow-red-600/30 group-hover:rotate-12 transition-transform duration-300">
-                <Pizza className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
+              <Image
+                src="/PizzaVibeLogo.png"
+                alt="PizzaVibe Logo"
+                width={120}
+                height={40}
+                className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                priority
+              />
               <span className="font-extrabold text-lg sm:text-xl tracking-tight">
                 Pizza<span className="text-red-600">Vibe</span>
               </span>
