@@ -7,6 +7,7 @@ import pizzaRoutes from './routes/pizza.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 
 dotenv.config();
 
@@ -42,12 +43,13 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/pizzas', pizzaRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
 
-// Global 404 Handler for undefined API routes
-app.use('/api/*', (req: Request, res: Response) => {
+// Global 404 Handler for undefined routes
+app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
-    message: `API route ${req.originalUrl} not found`,
+    message: `Route ${req.originalUrl} not found`,
   });
 });
 

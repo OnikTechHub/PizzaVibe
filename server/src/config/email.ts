@@ -18,11 +18,13 @@ export const sendEmail = async ({
   subject,
   html,
   text,
+  replyTo,
 }: {
   to: string;
   subject: string;
   html?: string;
   text?: string;
+  replyTo?: string;
 }) => {
   const from = process.env.EMAIL_FROM || `"PizzaVibe Kitchen" <${process.env.EMAIL_USER}>`;
   return transporter.sendMail({
@@ -31,6 +33,7 @@ export const sendEmail = async ({
     subject,
     text,
     html,
+    replyTo,
   });
 };
 
