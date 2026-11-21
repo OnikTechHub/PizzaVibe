@@ -3,6 +3,7 @@ import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata: Metadata = {
   title: 'PizzaVibe | Artisan Pizza Delivery & Kitchen',
@@ -16,12 +17,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full scroll-smooth" data-scroll-behavior="smooth">
-      <body className="min-h-full flex flex-col bg-white text-slate-900 antialiased selection:bg-red-500 selection:text-white">
-        <Toaster position="bottom-right" />
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+    <html
+      lang="en"
+      className="h-full scroll-smooth"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
+      <body
+        className="min-h-full flex flex-col bg-white text-slate-900 antialiased selection:bg-red-500 selection:text-white"
+        suppressHydrationWarning
+      >
+        <AuthProvider>
+          <Toaster position="bottom-right" />
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );
