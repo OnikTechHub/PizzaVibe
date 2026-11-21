@@ -17,6 +17,10 @@ export interface IUser extends Document {
   password?: string;
   role: 'customer' | 'admin';
   phone?: string;
+  isVerified: boolean;
+  otp?: string;
+  otpExpires?: Date;
+  googleId?: string;
   addresses: IAddress[];
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
@@ -71,6 +75,21 @@ const UserSchema = new Schema<IUser>(
     phone: {
       type: String,
       trim: true,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpires: {
+      type: Date,
+      select: false,
+    },
+    googleId: {
+      type: String,
     },
     addresses: [AddressSchema],
     resetPasswordToken: String,
