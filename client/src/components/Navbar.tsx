@@ -7,6 +7,7 @@ import {
   Home,
   Utensils,
   Sparkles,
+  MessageSquare,
   ShoppingBag,
   LogIn,
   UserPlus,
@@ -23,8 +24,9 @@ interface NavItem {
 
 const navLinks: NavItem[] = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Menu', href: '#menu', icon: Utensils },
-  { label: 'About', href: '#about', icon: Sparkles },
+  { label: 'Menu', href: '/#menu', icon: Utensils },
+  { label: 'About', href: '/about', icon: Sparkles },
+  { label: 'Contact', href: '/contact', icon: MessageSquare },
 ];
 
 interface NavbarProps {

@@ -38,18 +38,23 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#menu" className="text-slate-600 hover:text-red-600 transition-colors inline-block">
+                <Link href="/#menu" className="text-slate-600 hover:text-red-600 transition-colors inline-block">
                   Chef Signature Menu
                 </Link>
               </li>
               <li>
-                <Link href="#about" className="text-slate-600 hover:text-red-600 transition-colors inline-block">
+                <Link href="/about" className="text-slate-600 hover:text-red-600 transition-colors inline-block">
                   About Our Kitchen
                 </Link>
               </li>
               <li>
-                <Link href="#contact" className="text-slate-600 hover:text-red-600 transition-colors inline-block">
+                <Link href="/contact" className="text-slate-600 hover:text-red-600 transition-colors inline-block">
                   Contact &amp; Locations
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy-policy" className="text-slate-600 hover:text-red-600 transition-colors inline-block">
+                  Privacy Policy
                 </Link>
               </li>
             </ul>
@@ -93,14 +98,14 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-red-600 shrink-0" />
-                <a href="tel:+8801800000000" className="hover:text-red-600 transition-colors font-medium">
-                  +880 1800-000000
+                <a href="tel:+8801828347761" className="hover:text-red-600 transition-colors font-medium">
+                  +880 1828347761
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-red-600 shrink-0" />
-                <a href="mailto:support@pizzavibe.com.bd" className="hover:text-red-600 transition-colors font-medium break-all">
-                  support@pizzavibe.com.bd
+                <a href="mailto:onikdas.dev@gmail.com" className="hover:text-red-600 transition-colors font-medium break-all">
+                  onikdas.dev@gmail.com
                 </a>
               </li>
             </ul>
@@ -109,9 +114,13 @@ export default function Footer() {
 
         {/* Bottom Credits & Copyright */}
         <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
-          <p>
-            &copy; 2026 PizzaVibe Delivery Technologies Inc. All rights reserved.
-          </p>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1">
+            <p>&copy; 2026 PizzaVibe Delivery Technologies Inc. All rights reserved.</p>
+            <span className="hidden sm:inline text-slate-300">&bull;</span>
+            <Link href="/privacy-policy" className="text-slate-500 hover:text-red-600 underline-offset-2 hover:underline transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
           <p className="flex items-center justify-center gap-1.5">
             <span>Crafted with</span>
             <Heart className="w-3.5 h-3.5 text-red-600 fill-red-600" />
