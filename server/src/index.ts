@@ -1,6 +1,7 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import connectDB from './config/db.js';
 import inventoryRoutes from './routes/inventory.routes.js';
 import pizzaRoutes from './routes/pizza.routes.js';
@@ -8,8 +9,6 @@ import orderRoutes from './routes/order.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import contactRoutes from './routes/contact.routes.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,8 +32,23 @@ app.get('/api/health', (_req: Request, res: Response) => {
     version: '1.0.0',
     developer: 'Onik Das',
     project: 'OIBSIP Level 3 Task 1',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
   });
+});
+
+// Guard database-dependent API endpoints against buffering freezes
+app.use('/api', (req: Request, res: Response, next) => {
+  if (req.path === '/health') return next();
+
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection is still establishing or temporarily unavailable. Please retry in a few seconds.',
+    });
+  }
+
+  next();
 });
 
 // Mount Routes
