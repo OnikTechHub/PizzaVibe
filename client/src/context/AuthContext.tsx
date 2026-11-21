@@ -17,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (updatedData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,8 +71,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast.success('You have been logged out.');
   };
 
+  const updateUser = (updatedData: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updatedData };
+      try {
+        localStorage.setItem('pizzavibe_user', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to update user in localStorage:', e);
+      }
+      return updated;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
