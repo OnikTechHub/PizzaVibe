@@ -637,4 +637,96 @@ router.get('/me', protect, async (req: AuthRequest, res: Response) => {
   }
 });
 
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update authenticated user's profile details (Name, Phone)
+ * @access  Private
+ */
+router.put('/profile', protect, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { name, phone } = req.body;
+
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name must be at least 2 characters long.',
+        });
+      }
+      req.user.name = name.trim();
+    }
+
+    if (phone !== undefined) {
+      req.user.phone = typeof phone === 'string' ? phone.trim() : '';
+    }
+
+    await req.user.save();
+
+    return res.json({
+      success: true,
+      message: 'Profile updated successfully.',
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        phone: req.user.phone,
+        addresses: req.user.addresses,
+      },
+    });
+  } catch (error: unknown) {
+    console.error('[Update Profile Error]:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update profile';
+    return res.status(500).json({ success: false, message });
+  }
+});
+
+// Also alias /me to /profile update for standard REST semantics
+router.put('/me', protect, async (req: AuthRequest, res: Response) => {
+  // Re-use logic from /profile
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { name, phone } = req.body;
+
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name must be at least 2 characters long.',
+        });
+      }
+      req.user.name = name.trim();
+    }
+
+    if (phone !== undefined) {
+      req.user.phone = typeof phone === 'string' ? phone.trim() : '';
+    }
+
+    await req.user.save();
+
+    return res.json({
+      success: true,
+      message: 'Profile updated successfully.',
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        phone: req.user.phone,
+        addresses: req.user.addresses,
+      },
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update profile';
+    return res.status(500).json({ success: false, message });
+  }
+});
+
 export default router;
