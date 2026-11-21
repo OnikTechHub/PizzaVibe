@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import toast from 'react-hot-toast';
 
 export interface User {
@@ -23,30 +23,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return localStorage.getItem('pizzavibe_token');
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
+  // Initialize to null to guarantee 100% server-client hydration match
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('pizzavibe_user');
-        return stored ? JSON.parse(stored) : null;
-      } catch {
-        return null;
-      }
+  // Restore authenticated session safely on client mount without hydration mismatch
+  useEffect(() => {
+    try {
+      const storedToken = localStorage.getItem('pizzavibe_token');
+      const storedUser = localStorage.getItem('pizzavibe_user');
+      if (storedToken) setToken(storedToken);
+      if (storedUser) setUser(JSON.parse(storedUser));
+    } catch (e) {
+      console.warn('Failed to restore auth session from localStorage:', e);
+    } finally {
+      setLoading(false);
     }
-    return null;
-  });
-
-  const loading = false;
+  }, []);
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);

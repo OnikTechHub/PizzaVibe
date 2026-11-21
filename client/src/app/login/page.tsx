@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
+import { authClient } from '@/lib/auth-client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -84,35 +85,50 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      // Prompt for email in demo environment, or submit default profile
-      const promptEmail = prompt('Enter your Google email to simulate Google Sign-In:', email || 'customer@gmail.com');
-      if (!promptEmail) {
-        setGoogleLoading(false);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const redirectUri = `${window.location.origin}/auth/callback/google`;
+
+      // 1. Better Auth Social Sign-In integration
+      try {
+        await authClient.signIn.social({
+          provider: 'google',
+          callbackURL: redirectUri,
+        });
         return;
+      } catch (betterAuthErr) {
+        console.warn('[Better Auth Fallback to Google OAuth flow]:', betterAuthErr);
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${apiUrl}/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: promptEmail.split('@')[0],
-          email: promptEmail.trim().toLowerCase(),
-          googleId: `google_${Date.now()}`,
-        }),
-      });
+      // 2. Direct Google OAuth 2.0 with prompt=select_account for real account chooser
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Google sign-in failed');
+      if (!clientId) {
+        // Try requesting authorization URL from server
+        const res = await fetch(`${apiUrl}/auth/google/url`);
+        const data = await res.json();
+        if (res.ok && data.url) {
+          window.location.href = data.url;
+          return;
+        }
 
-      login(data.token, data.user);
-      toast.success(`Signed in as ${data.user.name}!`);
-      router.push('/');
+        throw new Error(
+          'Google Client ID is not configured. Please add GOOGLE_CLIENT_ID to your .env file to sign in with Google.'
+        );
+      }
+
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+        clientId
+      )}&redirect_uri=${encodeURIComponent(
+        redirectUri
+      )}&response_type=code&scope=${encodeURIComponent(
+        'openid email profile'
+      )}&prompt=select_account&access_type=offline`;
+
+      window.location.href = googleAuthUrl;
     } catch (err: unknown) {
       console.error('[Google Sign-In Error]:', err);
       const msg = err instanceof Error ? err.message : 'Google Sign-In failed';
       toast.error(msg);
-    } finally {
       setGoogleLoading(false);
     }
   };
